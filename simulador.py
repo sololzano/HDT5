@@ -1,7 +1,8 @@
 # Universidad del Valle de Guatemala
 # Hugo Elvira 15249
-# Carlos Solorzano
+# Carlos Solorzano 08832
 # Hoja de trabajo 5
+# Codigo de simulacion basado en ejemplos de clase y anteriores
 
 
 
@@ -9,8 +10,9 @@ import simpy
 import random
 
 
-
 def proceso(sienv, t_proceso, nombre, ram, cant_mem, cant_ins, inst_t):
+    global t_total
+    global tiempos
     
     #Simulacion del tiempo al llegar el proceso (parte new)
     yield sienv.timeout(t_proceso)
@@ -51,31 +53,33 @@ def proceso(sienv, t_proceso, nombre, ram, cant_mem, cant_ins, inst_t):
             #(waiting)
             with espera.request() as req2:
                 yield req2
-                #tiempo de espera para operaciones de entrada y salida
+                #tiempo supuesto de espera para operaciones de entrada y salida
                 yield sienv.timeout(1)                
-                print('tiempo: %f - %s (waiting) realizadas operaciones (i/o)' % (sienv.now, nombre))
+                print('tiempo: %f - %s (waiting) realizadas operaciones (entrada/salida)' % (sienv.now, nombre))
     
 
     #(exit - terminated)
     #cantidad de ram que retorna
     yield ram.put(cant_mem)
     print('tiempo: %f - %s (terminated), retorna %d de memoria ram' % (sienv.now, nombre, cant_mem))
-
-
+    t_total += (sienv.now - tiempo_al_llegar) #se guarda el total de tiempo por todos los procesos
+    tiempos.append(sienv.now - tiempo_al_llegar) #se guarda cada tiempo 
 #Definicion de variables
-inst_t = 3.0 #3 instrucciones/tiempo
-memoria_ram= 100 #se define memoria ram de 100
-cant_procesos = 100 # cantidad de procesos a ejecutar
+inst_t = 3.0 # cantidad de instrucciones/tiempo
+memoria_ram= 100 #se define cantidad de memoria ram
+cant_procesos = 25 # cantidad de procesos a ejecutar
+t_total=0.0 #inicializa la variable que almacenara el tiempo total de los procesos
+tiempos=[] #se guardara cada tiempo individual para extraer la desviacion estandar
 
 
 sienv = simpy.Environment()  #crear ambiente de simulacion
-cpu = simpy.Resource (sienv, capacity=1) #cola para acceso a cpu
+cpu = simpy.Resource (sienv, capacity=2) #cola para acceso a cpu
 ram = simpy.Container(sienv, init=memoria_ram, capacity=memoria_ram) #se crea el simulador para memoria ram
-espera = simpy.Resource (sienv, capacity=1) #cola para acceso a operaciones i/o
+espera = simpy.Resource (sienv, capacity=2) #cola para acceso a operaciones i/o
 
 # Crear semilla para random 
 random.seed(1997)
-rango = 10 #  numero de intervalos
+rango = 1 #  numero de intervalos
 
 
 # Se creean los procesos a simular
@@ -87,3 +91,20 @@ for i in range(cant_procesos):
 
 # comienza la simulacion
 sienv.run()
+
+#Tiempo promedio por procesos
+print " "
+prom=(t_total/cant_procesos)
+print('El tiempo promeido es: %f' % (prom))
+
+
+#Desviaccion estandar
+sumatoria=0
+
+for xi in tiempos:
+    sumatoria+=(xi-prom)**2
+
+desviacions=(sumatoria/(cant_procesos-1))**0.5
+
+print " "
+print('La desviacion estandar es: %f' %(desviacions))
